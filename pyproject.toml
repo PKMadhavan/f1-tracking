@@ -16,7 +16,9 @@ dependencies = [
     "opencv-python-headless==4.9.0.80",
     "torch>=2.0.0",
     "torchvision>=0.15.0",
-    "numpy>=1.24.0",
+    # torch here is built against the numpy 1.x ABI; importing it under numpy 2.x
+    # prints "Failed to initialize NumPy" and risks a crash.
+    "numpy>=1.24.0,<2",
     "motmetrics==1.4.0",
     "matplotlib>=3.7.0",
     "tqdm>=4.65.0",
