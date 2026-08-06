@@ -1,47 +1,81 @@
 # F1 Car Detection & Tracking
 
-YOLOv8 + DeepSORT pipeline for detecting and tracking Formula 1 cars in race footage.
+<!-- Once pushed to GitHub, replace OWNER/REPO below to activate the CI badge:
+[![CI](https://github.com/OWNER/REPO/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/REPO/actions/workflows/ci.yml) -->
+![Python](https://img.shields.io/badge/python-3.10%2B-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+
+YOLOv8 + DeepSORT pipeline for detecting and tracking Formula 1 cars in race footage. Originally built for CSC 528, packaged here as a proper installable Python package with a live demo, tests, CI, and Docker support.
+
+![Sample annotated frames](sample_frames.png)
 
 ---
 
-## Files
+## Features
 
-| File | Purpose |
+- **Detection** — YOLOv8 (COCO `car` class) per-frame.
+- **Tracking** — DeepSORT with Kalman filtering + CNN re-ID, tuned to survive broadcast camera cuts.
+- **Evaluation** — MOTA / IDF1 (via [py-motmetrics](https://github.com/cheind/py-motmetrics)) plus GT-free track-stability metrics (fragmentation, detection rate, short-track ratio).
+- **Live demo** — Streamlit app: upload a clip, get an annotated video + stats in your browser.
+- **Production scaffolding** — installable package (`pyproject.toml`), CLI console scripts, unit tests, GitHub Actions CI, Docker image.
+
+## Project Structure
+
+| Path | Purpose |
 |---|---|
-| `main.py` | Entry point — runs full pipeline |
-| `detect.py` | YOLOv8 car detection wrapper |
-| `track.py` | DeepSORT tracking wrapper |
-| `visualize.py` | Draw boxes/IDs onto frames, write MP4 |
-| `evaluate.py` | MOTA / IDF1 metrics + track stability metrics |
-| `generate_gt.py` | Pseudo-GT generator (YOLOv8n high-conf + DeepSORT oracle) |
-| `compare_models.py` | Benchmark yolov8n vs yolov8s |
-| `save_analysis.py` | Generate analysis plots and sample frames |
-| `utils.py` | Shared helpers |
-| `requirements.txt` | All dependencies |
-| `notebooks/F1_Tracking.ipynb` | Local Jupyter notebook with full analysis |
+| `src/f1_tracking/detect.py` | YOLOv8 car detection wrapper |
+| `src/f1_tracking/track.py` | DeepSORT tracking wrapper |
+| `src/f1_tracking/visualize.py` | Draw boxes/IDs onto frames, write MP4 |
+| `src/f1_tracking/evaluate.py` | MOTA / IDF1 metrics + track stability metrics |
+| `src/f1_tracking/pipeline.py` | End-to-end detect → track → annotate → evaluate pipeline |
+| `src/f1_tracking/cli.py` | `f1-track` CLI entry point |
+| `src/f1_tracking/ground_truth.py` | Pseudo-GT generator (YOLOv8m oracle + DeepSORT) — `f1-gt` |
+| `src/f1_tracking/benchmark.py` | Benchmark yolov8n vs yolov8s — `f1-compare` |
+| `src/f1_tracking/analysis.py` | Generate analysis plots and sample frames — `f1-analyze` |
+| `src/f1_tracking/utils.py` | Shared helpers |
+| `app/streamlit_app.py` | Interactive browser demo |
+| `tests/` | pytest unit tests (YOLO/DeepSORT mocked — no model download needed) |
+| `notebooks/F1_Tracking_Final.ipynb` | Full local analysis notebook |
 
 ---
 
 ## Quick Start
 
 ```bash
-pip install -r requirements.txt
+./setup.sh              # creates .venv, installs f1-tracking + dev/app extras
+source .venv/bin/activate
 
 # Run full pipeline
-python main.py --input f1_trimmed.mp4 --output result.mp4
+f1-track --input f1_trimmed.mp4 --output result.mp4
 
 # With pseudo-GT evaluation (MOTA / IDF1)
-python generate_gt.py --input f1_trimmed.mp4 --output annotations/gt.txt
-python main.py --input f1_trimmed.mp4 --output result.mp4 --gt annotations/gt.txt
+f1-gt --input f1_trimmed.mp4 --output annotations/gt.txt
+f1-track --input f1_trimmed.mp4 --output result.mp4 --gt annotations/gt.txt
 
 # Model comparison
-python compare_models.py --input f1_trimmed.mp4 --frames 300
+f1-compare --input f1_trimmed.mp4 --frames 300
 
 # Save analysis plots + sample frames
-python save_analysis.py --input f1_trimmed.mp4
+f1-analyze --input f1_trimmed.mp4
 ```
 
-## CLI Options
+### Live demo (Streamlit)
+
+```bash
+streamlit run app/streamlit_app.py
+```
+
+Upload a clip, tune model/confidence/frame-count in the sidebar, and get an annotated video plus stats in your browser.
+
+### Docker
+
+```bash
+docker build -t f1-tracking .
+docker run -p 8501:8501 f1-tracking
+# open http://localhost:8501
+```
+
+## CLI Options (`f1-track`)
 
 ```
 --input        Path to input video (required)
@@ -50,6 +84,7 @@ python save_analysis.py --input f1_trimmed.mp4
 --conf         Detection confidence threshold (default: 0.25)
 --max-frames   Process only first N frames (useful for testing)
 --gt           Ground truth .txt in MOT format — enables MOTA / IDF1 reporting
+--verbose      Enable debug logging
 ```
 
 ---
@@ -80,7 +115,7 @@ python save_analysis.py --input f1_trimmed.mp4
 
 #### MOT Metrics (pseudo-GT evaluation)
 
-> **Note on pseudo-GT:** Ground truth was generated using YOLOv8n at conf=0.5 (high-confidence only detections). The predictor runs at conf=0.25, so lower-confidence detections are counted as false positives against this GT. This inflates FP and suppresses MOTA. The ID switch count of **1** is the most reliable metric here — it reflects true tracking continuity independent of the detection threshold difference.
+> **Note on pseudo-GT:** ground truth is generated by `f1-gt` using **YOLOv8m** (a stronger, independent detector) at high confidence as the oracle, tracked with the same DeepSORT tuning as the predictor — an earlier version of this script mistakenly reused YOLOv8n for both the oracle and the predictor, which made the GT non-independent; that's fixed as of this package restructure. The predictor still runs at conf=0.25 by default, so lower-confidence detections are counted as false positives against the higher-confidence GT — this inflates FP and suppresses MOTA. The ID switch count is the most reliable metric here, since it reflects true tracking continuity independent of the detection threshold difference.
 
 | Metric | Value |
 |---|---|
@@ -90,7 +125,7 @@ python save_analysis.py --input f1_trimmed.mp4
 | Misses | 225 |
 | False Positives | 3820 (threshold mismatch artefact) |
 
-> For true MOTA/IDF1 scores, annotate frames manually using [CVAT](https://cvat.ai) and export in MOT format. The 1 ID switch demonstrates the tracker maintains identity correctly when GT and predictor agree on a detection.
+> For true MOTA/IDF1 scores, annotate frames manually using [CVAT](https://cvat.ai) and export in MOT format.
 
 ---
 
@@ -151,10 +186,21 @@ frame_id, object_id, x, y, width, height, confidence, -1, -1, -1
 
 Then:
 ```bash
-python main.py --input clip.mp4 --gt annotations/gt.txt
+f1-track --input clip.mp4 --gt annotations/gt.txt
 ```
 
 ---
+
+## Development
+
+```bash
+pip install -e ".[dev]"
+pytest -v                 # unit tests (YOLO/DeepSORT mocked, fast, no downloads)
+ruff check .               # lint
+black --check .            # format check
+```
+
+CI (`.github/workflows/ci.yml`) runs lint, format check, and tests on every push/PR.
 
 ## Output Files
 
