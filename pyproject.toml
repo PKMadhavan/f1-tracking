@@ -14,6 +14,11 @@ dependencies = [
     "ultralytics==8.2.0",
     "deep-sort-realtime==1.3.2",
     "opencv-python-headless==4.9.0.80",
+    # deep-sort-realtime unconditionally depends on unpinned "opencv-python"
+    # (GUI variant), which installs into the same cv2/ namespace as headless
+    # and silently overwrites it. The version pip picked (5.0.0.93) has no
+    # FFMPEG support, breaking video writing. Pin both to the same version.
+    "opencv-python==4.9.0.80",
     # torch>=2.3 has no macOS x86_64 wheels on PyPI (Apple Silicon only past
     # this point), so cap here for Intel Mac / CI portability.
     "torch>=2.0.0,<2.3.0",
