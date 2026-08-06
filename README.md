@@ -1,11 +1,10 @@
 # F1 Car Detection & Tracking
 
-<!-- Once pushed to GitHub, replace OWNER/REPO below to activate the CI badge:
-[![CI](https://github.com/OWNER/REPO/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/REPO/actions/workflows/ci.yml) -->
+[![CI](https://github.com/PKMadhavan/f1-tracking/actions/workflows/ci.yml/badge.svg)](https://github.com/PKMadhavan/f1-tracking/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-YOLOv8 + DeepSORT pipeline for detecting and tracking Formula 1 cars in race footage. Originally built for CSC 528, packaged here as a proper installable Python package with a live demo, tests, CI, and Docker support.
+A production-grade computer vision pipeline for detecting and tracking Formula 1 cars in race footage, built on YOLOv8 and DeepSORT. Packaged as an installable Python library with a live Streamlit demo, Docker deployment, a pytest test suite, and GitHub Actions CI.
 
 ![Sample annotated frames](sample_frames.png)
 
@@ -35,7 +34,7 @@ YOLOv8 + DeepSORT pipeline for detecting and tracking Formula 1 cars in race foo
 | `src/f1_tracking/utils.py` | Shared helpers |
 | `app/streamlit_app.py` | Interactive browser demo |
 | `tests/` | pytest unit tests (YOLO/DeepSORT mocked — no model download needed) |
-| `notebooks/F1_Tracking_Final.ipynb` | Full local analysis notebook |
+| `examples/quickstart.py` | Minimal script showing how to call the pipeline as a library |
 
 ---
 
