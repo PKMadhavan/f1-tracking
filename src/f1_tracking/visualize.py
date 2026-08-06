@@ -44,6 +44,13 @@ def write_video(frames: list[np.ndarray], output_path: str, fps: float) -> None:
     """
     Write a list of annotated BGR frames to an MP4 file.
 
+    Tries H.264 ("avc1") first, since that's the only codec HTML5 <video>
+    tags (browsers, Streamlit's st.video) reliably play back. "mp4v"
+    (MPEG-4 Part 2) writes a valid MP4 that OpenCV/ffmpeg can read but that
+    Chrome/Safari refuse to decode, which shows up as a video player stuck
+    at 0:00 with no visible frame. Falls back to "mp4v" only if the
+    environment's OpenCV/ffmpeg build can't encode H.264.
+
     Args:
         frames:      List of np.ndarray frames (all same size).
         output_path: Output file path, e.g. 'output_tracked.mp4'.
@@ -53,8 +60,11 @@ def write_video(frames: list[np.ndarray], output_path: str, fps: float) -> None:
         raise ValueError("No frames to write.")
 
     h, w = frames[0].shape[:2]
-    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-    writer = cv2.VideoWriter(output_path, fourcc, fps, (w, h))
+
+    writer = cv2.VideoWriter(output_path, cv2.VideoWriter_fourcc(*"avc1"), fps, (w, h))
+    if not writer.isOpened():
+        logger.warning("H.264 (avc1) encoder unavailable; falling back to mp4v (not browser-playable)")
+        writer = cv2.VideoWriter(output_path, cv2.VideoWriter_fourcc(*"mp4v"), fps, (w, h))
     if not writer.isOpened():
         raise OSError(f"Could not open video writer for: {output_path}")
 
