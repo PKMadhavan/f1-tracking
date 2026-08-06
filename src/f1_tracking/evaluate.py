@@ -12,23 +12,23 @@ def compute_metrics_with_gt(gt_frames: dict, pred_frames: dict) -> dict:
         pred_frames: {frame_id: [{"bbox":[x1,y1,x2,y2], "track_id": int}, ...]}
 
     Returns:
-        Dict with: MOTA (%), IDF1 (%), ID Switches, Misses, FP
+        Dict with: MOTA (%), IDF1 (%), ID_Switches, Misses, FP
     """
     acc = mm.MOTAccumulator(auto_id=True)
 
     all_frames = sorted(set(list(gt_frames.keys()) + list(pred_frames.keys())))
     for frame_id in all_frames:
-        gts   = gt_frames.get(frame_id, [])
+        gts = gt_frames.get(frame_id, [])
         preds = pred_frames.get(frame_id, [])
 
-        gt_ids   = [g["gt_id"]    for g in gts]
+        gt_ids = [g["gt_id"] for g in gts]
         pred_ids = [p["track_id"] for p in preds]
 
         if gts and preds:
             dist = mm.distances.iou_matrix(
                 [g["bbox"] for g in gts],
                 [p["bbox"] for p in preds],
-                max_iou=0.5
+                max_iou=0.5,
             )
         else:
             dist = np.empty((len(gt_ids), len(pred_ids)))
@@ -38,15 +38,15 @@ def compute_metrics_with_gt(gt_frames: dict, pred_frames: dict) -> dict:
     mh = mm.metrics.create()
     summary = mh.compute(
         acc,
-        metrics=["mota", "idf1", "num_switches", "num_misses", "num_false_positives"]
+        metrics=["mota", "idf1", "num_switches", "num_misses", "num_false_positives"],
     )
 
     return {
-        "MOTA":        round(float(summary["mota"].iloc[0]) * 100, 2),
-        "IDF1":        round(float(summary["idf1"].iloc[0]) * 100, 2),
+        "MOTA": round(float(summary["mota"].iloc[0]) * 100, 2),
+        "IDF1": round(float(summary["idf1"].iloc[0]) * 100, 2),
         "ID_Switches": int(summary["num_switches"].iloc[0]),
-        "Misses":      int(summary["num_misses"].iloc[0]),
-        "FP":          int(summary["num_false_positives"].iloc[0]),
+        "Misses": int(summary["num_misses"].iloc[0]),
+        "FP": int(summary["num_false_positives"].iloc[0]),
     }
 
 
@@ -60,14 +60,14 @@ def load_mot_gt(gt_txt_path: str) -> dict:
     Returns:
         {frame_id: [{"bbox":[x1,y1,x2,y2], "gt_id": int}, ...]}
     """
-    gt_frames = {}
+    gt_frames: dict = {}
     with open(gt_txt_path) as f:
         for line in f:
             parts = line.strip().split(",")
             if len(parts) < 6:
                 continue
             frame_id = int(parts[0])
-            gt_id    = int(parts[1])
+            gt_id = int(parts[1])
             x, y, w, h = int(parts[2]), int(parts[3]), int(parts[4]), int(parts[5])
             bbox = [x, y, x + w, y + h]
             gt_frames.setdefault(frame_id, []).append({"bbox": bbox, "gt_id": gt_id})
@@ -97,11 +97,11 @@ def count_basic_stats(pred_frames: dict) -> dict:
     avg_simultaneous = round(total_detections / total_frames, 2) if total_frames else 0
 
     return {
-        "total_unique_tracks":    len(all_ids),
-        "max_simultaneous_cars":  max_simultaneous,
-        "avg_simultaneous_cars":  avg_simultaneous,
-        "total_frames":           total_frames,
-        "total_detections":       total_detections,
+        "total_unique_tracks": len(all_ids),
+        "max_simultaneous_cars": max_simultaneous,
+        "avg_simultaneous_cars": avg_simultaneous,
+        "total_frames": total_frames,
+        "total_detections": total_detections,
     }
 
 
@@ -131,18 +131,16 @@ def compute_track_stability(pred_frames: dict) -> dict:
 
     if not track_frames:
         return {
-            "avg_track_length":  0,
-            "fragmentation":     0,
+            "avg_track_length": 0,
+            "fragmentation": 0,
             "short_track_ratio": 0,
-            "detection_rate":    0,
+            "detection_rate": 0,
         }
 
     lengths = [len(v) for v in track_frames.values()]
     avg_length = round(sum(lengths) / len(lengths), 1)
 
-    max_simultaneous = max(
-        len(pred_frames[f]) for f in pred_frames
-    ) if pred_frames else 1
+    max_simultaneous = max(len(pred_frames[f]) for f in pred_frames) if pred_frames else 1
 
     fragmentation = round(len(track_frames) / max(max_simultaneous, 1), 2)
 
@@ -152,8 +150,8 @@ def compute_track_stability(pred_frames: dict) -> dict:
     detection_rate = round(frames_with_detections / max(len(pred_frames), 1), 2)
 
     return {
-        "avg_track_length":  avg_length,
-        "fragmentation":     fragmentation,
+        "avg_track_length": avg_length,
+        "fragmentation": fragmentation,
         "short_track_ratio": short_track_ratio,
-        "detection_rate":    detection_rate,
+        "detection_rate": detection_rate,
     }

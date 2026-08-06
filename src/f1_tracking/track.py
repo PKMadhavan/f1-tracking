@@ -1,5 +1,9 @@
-from deep_sort_realtime.deepsort_tracker import DeepSort
+import logging
+
 import numpy as np
+from deep_sort_realtime.deepsort_tracker import DeepSort
+
+logger = logging.getLogger(__name__)
 
 
 class CarTracker:
@@ -11,11 +15,11 @@ class CarTracker:
 
     def __init__(
         self,
-        max_age=70,
-        n_init=5,
-        max_cosine_distance=0.3,
-        embedder="mobilenet",
-        half=False,
+        max_age: int = 70,
+        n_init: int = 5,
+        max_cosine_distance: float = 0.3,
+        embedder: str = "mobilenet",
+        half: bool = False,
     ):
         """
         Args:
@@ -29,6 +33,13 @@ class CarTracker:
                                   'mobilenet' = fast; 'clip_RN50' = more accurate but slower.
             half:                 FP16 inference — only useful on GPU, set False for CPU.
         """
+        logger.info(
+            "Loading DeepSORT tracker: max_age=%d n_init=%d max_cosine_distance=%.2f embedder=%s",
+            max_age,
+            n_init,
+            max_cosine_distance,
+            embedder,
+        )
         self.tracker = DeepSort(
             max_age=max_age,
             n_init=n_init,
@@ -38,7 +49,7 @@ class CarTracker:
             embedder_gpu=False,
         )
 
-    def update(self, detections: list, frame: np.ndarray) -> list:
+    def update(self, detections: list[dict], frame: np.ndarray) -> list[dict]:
         """
         Update tracker with new detections from one frame.
 
@@ -60,11 +71,11 @@ class CarTracker:
                 [
                     d["bbox"][0],
                     d["bbox"][1],
-                    d["bbox"][2] - d["bbox"][0],   # width
-                    d["bbox"][3] - d["bbox"][1],   # height
+                    d["bbox"][2] - d["bbox"][0],  # width
+                    d["bbox"][3] - d["bbox"][1],  # height
                 ],
                 d["conf"],
-                d["class_id"]
+                d["class_id"],
             )
             for d in detections
         ]
@@ -76,9 +87,11 @@ class CarTracker:
             if not t.is_confirmed():
                 continue
             x1, y1, x2, y2 = map(int, t.to_ltrb())
-            results.append({
-                "track_id": t.track_id,
-                "bbox": [x1, y1, x2, y2],
-                "conf": t.det_conf if t.det_conf else 0.0
-            })
+            results.append(
+                {
+                    "track_id": t.track_id,
+                    "bbox": [x1, y1, x2, y2],
+                    "conf": t.det_conf if t.det_conf else 0.0,
+                }
+            )
         return results

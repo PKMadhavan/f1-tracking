@@ -1,5 +1,9 @@
+import logging
+
 import cv2
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 
 def _color_for_id(track_id: int) -> tuple:
@@ -8,7 +12,7 @@ def _color_for_id(track_id: int) -> tuple:
     return tuple(int(x) for x in np.random.randint(80, 255, 3))
 
 
-def draw_tracks(frame: np.ndarray, tracks: list) -> np.ndarray:
+def draw_tracks(frame: np.ndarray, tracks: list[dict]) -> np.ndarray:
     """
     Overlay bounding boxes and track IDs onto a single frame.
 
@@ -32,12 +36,11 @@ def draw_tracks(frame: np.ndarray, tracks: list) -> np.ndarray:
         label = f"Car #{tid}"
         (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)
         cv2.rectangle(out, (x1, y1 - th - 8), (x1 + tw + 4, y1), color, -1)
-        cv2.putText(out, label, (x1 + 2, y1 - 4),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+        cv2.putText(out, label, (x1 + 2, y1 - 4), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
     return out
 
 
-def write_video(frames: list, output_path: str, fps: float) -> None:
+def write_video(frames: list[np.ndarray], output_path: str, fps: float) -> None:
     """
     Write a list of annotated BGR frames to an MP4 file.
 
@@ -52,9 +55,13 @@ def write_video(frames: list, output_path: str, fps: float) -> None:
     h, w = frames[0].shape[:2]
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
     writer = cv2.VideoWriter(output_path, fourcc, fps, (w, h))
+    if not writer.isOpened():
+        raise OSError(f"Could not open video writer for: {output_path}")
 
-    for f in frames:
-        writer.write(f)
-    writer.release()
+    try:
+        for f in frames:
+            writer.write(f)
+    finally:
+        writer.release()
 
-    print(f"Video saved → {output_path}  ({len(frames)} frames @ {fps:.1f} fps)")
+    logger.info("Video saved → %s (%d frames @ %.1f fps)", output_path, len(frames), fps)

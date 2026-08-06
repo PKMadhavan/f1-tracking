@@ -1,5 +1,6 @@
-import cv2
 import os
+
+import cv2
 
 
 def get_video_info(video_path: str) -> dict:
@@ -7,14 +8,16 @@ def get_video_info(video_path: str) -> dict:
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
         raise FileNotFoundError(f"Cannot open video: {video_path}")
-    info = {
-        "fps":          cap.get(cv2.CAP_PROP_FPS),
-        "total_frames": int(cap.get(cv2.CAP_PROP_FRAME_COUNT)),
-        "width":        int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)),
-        "height":       int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)),
-        "duration_sec": cap.get(cv2.CAP_PROP_FRAME_COUNT) / max(cap.get(cv2.CAP_PROP_FPS), 1),
-    }
-    cap.release()
+    try:
+        info = {
+            "fps": cap.get(cv2.CAP_PROP_FPS),
+            "total_frames": int(cap.get(cv2.CAP_PROP_FRAME_COUNT)),
+            "width": int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)),
+            "height": int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)),
+            "duration_sec": cap.get(cv2.CAP_PROP_FRAME_COUNT) / max(cap.get(cv2.CAP_PROP_FPS), 1),
+        }
+    finally:
+        cap.release()
     return info
 
 

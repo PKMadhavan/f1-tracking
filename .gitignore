@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Model weights (auto-downloaded by ultralytics / large binaries)
+*.pt
+*.onnx
+
+# Video files (large binaries, not suitable for git)
+*.mp4
+*.avi
+*.mov
+
+# Generated output / analysis artifacts
+output_tracked.mp4
+
+# Notebook checkpoints
+.ipynb_checkpoints/
+
+# Anaconda project cruft
+anaconda_projects/
+
+# OS / editor cruft
+.DS_Store
+.vscode/
+.idea/
+
+# Node (not used by this project's core pipeline)
+node_modules/
+
+# Env / secrets
+.env
