@@ -1,0 +1,41 @@
+# Video files - runtime inputs, not baked into the image
+*.mp4
+*.avi
+*.mov
+
+# Model weights - ultralytics auto-downloads these on first use
+*.pt
+*.onnx
+
+# Analysis / output images
+*.png
+
+# Not needed inside the image
+notebooks/
+tests/
+annotations/
+.github/
+
+# VCS / caches / envs
+.git/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Editor / OS cruft
+.DS_Store
+.vscode/
+.idea/
+
+# Docker itself
+Dockerfile
+.dockerignore
