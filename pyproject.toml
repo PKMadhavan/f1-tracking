@@ -14,8 +14,10 @@ dependencies = [
     "ultralytics==8.2.0",
     "deep-sort-realtime==1.3.2",
     "opencv-python-headless==4.9.0.80",
-    "torch>=2.0.0",
-    "torchvision>=0.15.0",
+    # torch>=2.3 has no macOS x86_64 wheels on PyPI (Apple Silicon only past
+    # this point), so cap here for Intel Mac / CI portability.
+    "torch>=2.0.0,<2.3.0",
+    "torchvision>=0.15.0,<0.18.0",
     # torch here is built against the numpy 1.x ABI; importing it under numpy 2.x
     # prints "Failed to initialize NumPy" and risks a crash.
     "numpy>=1.24.0,<2",
