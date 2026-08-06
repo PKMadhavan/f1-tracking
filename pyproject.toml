@@ -13,6 +13,9 @@ authors = [{ name = "Madhavan Panneerselvam Kumar" }]
 dependencies = [
     "ultralytics==8.2.0",
     "deep-sort-realtime==1.3.2",
+    # deep-sort-realtime's embedder imports the deprecated pkg_resources API at
+    # runtime; setuptools>=81 dropped it entirely, so cap below that.
+    "setuptools<81",
     "opencv-python-headless==4.9.0.80",
     # deep-sort-realtime unconditionally depends on unpinned "opencv-python"
     # (GUI variant), which installs into the same cv2/ namespace as headless
