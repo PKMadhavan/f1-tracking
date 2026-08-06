@@ -21,6 +21,10 @@ dependencies = [
     # torch here is built against the numpy 1.x ABI; importing it under numpy 2.x
     # prints "Failed to initialize NumPy" and risks a crash.
     "numpy>=1.24.0,<2",
+    # motmetrics pulls in scipy unpinned; latest scipy requires numpy>=2, which
+    # directly conflicts with the numpy<2 pin above. Cap to the last scipy
+    # series that still supports numpy 1.x.
+    "scipy>=1.10,<1.14",
     "motmetrics==1.4.0",
     "matplotlib>=3.7.0",
     "tqdm>=4.65.0",
