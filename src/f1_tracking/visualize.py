@@ -1,4 +1,6 @@
 import logging
+import shutil
+import subprocess
 
 import cv2
 import numpy as np
@@ -42,14 +44,20 @@ def draw_tracks(frame: np.ndarray, tracks: list[dict]) -> np.ndarray:
 
 def write_video(frames: list[np.ndarray], output_path: str, fps: float) -> None:
     """
-    Write a list of annotated BGR frames to an MP4 file.
+    Write a list of annotated BGR frames to an MP4 file, encoded as H.264 —
+    the only codec HTML5 <video> tags (browsers, Streamlit's st.video)
+    reliably play back.
 
-    Tries H.264 ("avc1") first, since that's the only codec HTML5 <video>
-    tags (browsers, Streamlit's st.video) reliably play back. "mp4v"
-    (MPEG-4 Part 2) writes a valid MP4 that OpenCV/ffmpeg can read but that
-    Chrome/Safari refuse to decode, which shows up as a video player stuck
-    at 0:00 with no visible frame. Falls back to "mp4v" only if the
-    environment's OpenCV/ffmpeg build can't encode H.264.
+    OpenCV's bundled ffmpeg (in the opencv-python-headless PyPI wheel) is a
+    static build without libx264, since that codec's licensing keeps it out
+    of redistributable wheels — cv2.VideoWriter(..., "avc1", ...) silently
+    can't open on a stock install. So this pipes raw frames to the *system*
+    ffmpeg binary instead (present via Homebrew locally, apt in Docker/CI),
+    which does bundle libx264. "mp4v" (MPEG-4 Part 2) is avoided entirely:
+    it produces a valid MP4 that OpenCV can read back but that Chrome/Safari
+    refuse to decode, which shows up as a video player stuck at 0:00 with no
+    visible frame. Falls back to cv2's mp4v writer only if no system ffmpeg
+    binary is on PATH at all.
 
     Args:
         frames:      List of np.ndarray frames (all same size).
@@ -61,17 +69,48 @@ def write_video(frames: list[np.ndarray], output_path: str, fps: float) -> None:
 
     h, w = frames[0].shape[:2]
 
-    writer = cv2.VideoWriter(output_path, cv2.VideoWriter_fourcc(*"avc1"), fps, (w, h))
-    if not writer.isOpened():
-        logger.warning("H.264 (avc1) encoder unavailable; falling back to mp4v (not browser-playable)")
-        writer = cv2.VideoWriter(output_path, cv2.VideoWriter_fourcc(*"mp4v"), fps, (w, h))
-    if not writer.isOpened():
-        raise OSError(f"Could not open video writer for: {output_path}")
-
-    try:
+    ffmpeg_bin = shutil.which("ffmpeg")
+    if ffmpeg_bin:
+        cmd = [
+            ffmpeg_bin,
+            "-y",
+            "-loglevel",
+            "error",
+            "-f",
+            "rawvideo",
+            "-pix_fmt",
+            "bgr24",
+            "-s",
+            f"{w}x{h}",
+            "-r",
+            str(fps),
+            "-i",
+            "-",
+            "-an",
+            "-c:v",
+            "libx264",
+            "-pix_fmt",
+            "yuv420p",
+            "-movflags",
+            "+faststart",
+            output_path,
+        ]
+        proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
         for f in frames:
-            writer.write(f)
-    finally:
-        writer.release()
+            proc.stdin.write(f.tobytes())
+        proc.stdin.close()
+        stderr = proc.stderr.read()
+        if proc.wait() != 0:
+            raise OSError(f"ffmpeg failed writing {output_path}: {stderr.decode(errors='replace')}")
+    else:
+        logger.warning("System ffmpeg not found on PATH; falling back to mp4v (not browser-playable)")
+        writer = cv2.VideoWriter(output_path, cv2.VideoWriter_fourcc(*"mp4v"), fps, (w, h))
+        if not writer.isOpened():
+            raise OSError(f"Could not open video writer for: {output_path}")
+        try:
+            for f in frames:
+                writer.write(f)
+        finally:
+            writer.release()
 
     logger.info("Video saved → %s (%d frames @ %.1f fps)", output_path, len(frames), fps)
